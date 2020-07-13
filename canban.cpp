@@ -19,16 +19,98 @@ Canban::Canban(QWidget *parent) : QWidget(parent)
     themesLayout = new QHBoxLayout();
 
 
-    for (size_t i = 0; i < themes.size(); i++)
+    for (size_t i = 0; i < themes.size(); i++) {
+        //QScrollArea *themeScroll = new QScrollArea();
+        //themeScroll->setWidget(themes[i]);
+        //themeScroll->ho
         themesLayout->addWidget(themes[i]);
+        //themesLayout->addWidget(themeScroll);
+    }
     themesLayout->addStretch(-1);
 
     setLayout(themesLayout);
 }
 
+void Canban::addNewTheme(Theme *theme)
+{
+    themeNames.push_back(theme->getName());
+    themes.push_back(theme);
+    themesLayout->insertWidget(themesLayout->count() - 1, theme);
+}
+
 void Canban::addNewTask(Task *task)
 {
-    themes[0]->addTask(task);
+    for (int i = 0; i < themeNames.size(); i++) {
+        if (themeNames[i] == "Новые задачи") {
+            task->setThemeName(themeNames[i]);
+            themes[i]->addTask(task);
+            for (auto perf : task->getPerformers())
+                perf->addTask(task);
+
+            return;
+        }
+    }
+
+}
+
+void Canban::addExistingTask(Task *task)
+{
+    for (int i = 0; i < themeNames.size(); i++) {
+        if (themeNames[i] == task->getThemeName()) {
+            themes[i]->addTask(task);
+            for (auto perf : task->getPerformers())
+                perf->addTask(task);
+            return;
+        }
+    }
+}
+
+void Canban::moveTask(Task *task, Theme *toTheme)
+{
+    Theme *fromTheme = nullptr;
+    for (auto i : themes) {
+        if (i->containsTask(task)) {
+            fromTheme = i;
+            break;
+        }
+    }
+    if (fromTheme != nullptr && toTheme != nullptr) {
+        fromTheme->removeTask(task);
+        toTheme->addTask(task);
+        task->setThemeName(toTheme->getName());
+    }
+}
+
+Task *Canban::getTask(QString taskName)
+{
+    for (auto i : themes) {
+        Task *task = i->getTask(taskName);
+        if (task)
+            return task;
+    }
+    return nullptr;
+}
+
+void Canban::removeTask(QString taskName)
+{
+    for (auto i : themes) {
+        i->removeTask(i->getTask(taskName));
+    }
+}
+
+QStringList Canban::getThemeNames()
+{
+    return themeNames;
+}
+
+Theme *Canban::getTheme(QString name)
+{
+
+    for (int i = 0; i < themeNames.length(); i++) {
+        if (themeNames[i] == name)
+            return themes[i];
+    }
+    return nullptr;
 }
 
 QStringList Canban::getEmployeeNames()
@@ -52,3 +134,5 @@ void Canban::updateTime()
     for (Theme *theme : themes)
         theme->updateTime();
 }
+
+

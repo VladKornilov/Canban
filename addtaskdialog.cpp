@@ -2,6 +2,7 @@
 #include <QGridLayout>
 #include <QGroupBox>
 #include <QColorDialog>
+#include <algorithm>
 
 #include "canban.h"
 #include "addtaskdialog.h"
@@ -66,6 +67,18 @@ AddTaskDialog::AddTaskDialog()
 
 std::vector<Employee *> AddTaskDialog::getPerformers()
 {
+    for (size_t i = 0; i < performers.size(); i++) {
+        for (size_t j = i + 1; j < performers.size(); j++)
+            if (performers[i] == performers[j]) performers[j] = nullptr;
+    }
+
+    auto i = std::find(performers.begin(), performers.end(), nullptr);
+    while (i != performers.end()) {
+        performers.erase(i);
+        i = std::find(performers.begin(), performers.end(), nullptr);
+    }
+
+
     return performers;
 }
 
@@ -99,6 +112,7 @@ QHBoxLayout *AddTaskDialog::setupPerfLayout()
 void AddTaskDialog::addFirstPerformer()
 {
     layout->addWidget(new QLabel("Исполнитель 1"), 3, 0);
+    performers.push_back(nullptr);
     layout->removeWidget(addPerfButton);
     layout->addLayout(setupPerfLayout(), 3, 1);
 
@@ -110,6 +124,7 @@ void AddTaskDialog::addFirstPerformer()
 void AddTaskDialog::addSecondPerformer()
 {
     layout->addWidget(new QLabel("Исполнитель 2"), 4, 0);
+    performers.push_back(nullptr);
     layout->removeWidget(addPerfButton);
     layout->addLayout(setupPerfLayout(), 4, 1);
     disconnect(addPerfButton, SIGNAL(released()), this, SLOT(addSecondPerformer()));
@@ -120,6 +135,7 @@ void AddTaskDialog::addSecondPerformer()
 void AddTaskDialog::addThirdPerformer()
 {
     layout->addWidget(new QLabel("Исполнитель 3"), 5, 0);
+    performers.push_back(nullptr);
     layout->removeWidget(addPerfButton);
     layout->addLayout(setupPerfLayout(), 5, 1);
     addPerfButton->hide();
@@ -131,10 +147,12 @@ void AddTaskDialog::replacePhoto(QString perfName)
         if (performerNames[i]->currentText() == perfName) {
             Employee *emp = Canban::inst()->getEmployee(perfName);
             if (emp != nullptr) {
+                performers[i] = emp;
                 performerPhotos[i]->setPixmap(QPixmap::fromImage(emp->getSmallPhoto()));
-                if (i == performers.size())
-                    performers.push_back(emp);
-                else performers[i] = emp;
+            }
+            else {
+                performers[i] = nullptr;
+                performerPhotos[i]->clear();
             }
         }
 }

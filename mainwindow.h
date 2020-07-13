@@ -9,6 +9,7 @@
 #include "canban.h"
 #include "addtaskdialog.h"
 #include "addemployeedialog.h"
+#include "files.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class MainWindow; }
@@ -31,8 +32,16 @@ private:
     void setupAddMenu();
 
     Canban *canban;
+    Files *files;
 
 private slots:
+    void loadTasks();
+    void loadEmployees();
+    void saveTasks();
+    void saveEmployees();
+    void reportTasks();
+    void reportEmployees();
+
     void addTask();
     void addTheme();
     void addEmployee();

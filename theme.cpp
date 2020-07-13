@@ -1,6 +1,7 @@
 #include <QStyleOption>
 #include <QPainter>
 #include <QPushButton>
+#include <QMenu>
 
 #include "canban.h"
 #include "theme.h"
@@ -8,7 +9,7 @@
 
 Theme::Theme(QWidget *parent, QString name, QColor *color) : QWidget(parent)
 {
-    selectedSort = DEADLINE;
+    selectedSort = NAME;
 
     nameLabel = new QLabel(name);
     nameLabel->setAlignment(Qt::AlignHCenter | Qt::AlignTop);
@@ -22,35 +23,41 @@ Theme::Theme(QWidget *parent, QString name, QColor *color) : QWidget(parent)
     nameLayout->addWidget(nameLabel);
     nameLayout->addStretch();
 
-    QPushButton *burger = new QPushButton();
+    burger = new QPushButton();
     burger->setIcon(QIcon("images/burger.png"));
     burger->setStyleSheet("QAbstractButton { background: rgba(255,255,255,0); } QAbstractButton:pressed {border: 2px solid #000000; }");
-    connect(burger, SIGNAL(released()), this, SLOT(pressBurger()));
-
+    burger->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(burger, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(ShowContextMenu(const QPoint&)));
     nameLayout->addWidget(burger);
 
     tasksLayout->addLayout(nameLayout);
-
     tasksLayout->insertStretch(-1);
-
-
     tasksLayout->setMargin(5);
     tasksLayout->setAlignment(Qt::AlignHCenter);
 
     setLayout(tasksLayout);
+
     setStyleSheet(QStringLiteral(".Theme { border-radius: 10px; background-color: %1; }").arg(color->name()));
     setContentsMargins(0, 5, 5, 0);
 
     setMinimumWidth(Canban::TASK_WIDTH + 10);
     setMaximumWidth(Canban::TASK_WIDTH + 10);
-
+//    setMinimumHeight(500);
 
     show();
+}
 
+QString Theme::getName()
+{
+    return nameLabel->text();
 }
 
 void Theme::addTask(Task *task)
 {
+    if (getName() == QString("Выполненные")) {
+        for (auto performer : task->getPerformers())
+            performer->markTaskCompleted(task);
+    }
     tasks.push_back(task);
     sortTasks();
 }
@@ -59,15 +66,39 @@ void Theme::removeTask(Task *task)
 {
     for (size_t i = 0; i < tasks.size(); i++)
         if (tasks[i] == task) {
+            tasksLayout->removeWidget(task);
+            tasksLayout->update();
             tasks.erase(tasks.begin() + i);
+            //delete task;
             break;
         }
     sortTasks();
 }
 
+bool Theme::containsTask(Task *task)
+{
+    for (auto i: tasks)
+        if (i == task)
+            return true;
+    return false;
+}
+
+Task *Theme::getTask(QString taskName)
+{
+    for (auto i : tasks)
+        if (i->getName() == taskName)
+            return i;
+    return nullptr;
+}
+
+std::vector<Task *> Theme::getTasks()
+{
+    return tasks;
+}
+
 
 bool cmpDeadline(Task *a, Task *b) {
-    return a->getDeadlineDateTime() < b->getCreatedDateTime();
+    return a->getDeadlineDateTime() < b->getDeadlineDateTime();
 }
 
 bool cmpCreated(Task *a, Task *b) {
@@ -78,32 +109,32 @@ bool cmpName(Task *a, Task *b) {
     return a->getName() < b->getName();
 }
 
-bool cmpPriority(Task &a, Task &b) {
-    //TODO
-    a.getName();
-    b.getName();
-    return true;
-}
+//bool cmpPriority(Task *a, Task *b) {
+//    return true;
+//}
 
 void Theme::sortTasks()
 {
-    switch (selectedSort) {
-    case DEADLINE:
-       // std::sort(tasks.begin(), tasks.end(), cmpDeadline);
-        break;
-    case CREATED:
-        //std::sort(tasks.begin(), tasks.end(), cmpCreated);
-        break;
-    case NAME:
-        //std::sort(tasks.begin(), tasks.end(), cmpName);
-        break;
-    case PRIORITY:
-        //std::sort(tasks.begin(), tasks.end(), cmpPriority);
-        break;
-    }
     for (size_t i = 0; i < tasks.size(); i++)
         tasksLayout->removeWidget(tasks[i]);
+
+    switch (selectedSort) {
+    case DEADLINE:
+        sort(cmpDeadline);
+        break;
+    case CREATED:
+        sort(cmpCreated);
+        break;
+    case NAME:
+        sort(cmpName);
+        break;
+    case PRIORITY:
+//        sort(cmpPriority);
+        break;
+    }
+
     for (size_t i = 0; i < tasks.size(); i++)
+        //tasksLayout->addWidget(tasks[i]);
         tasksLayout->insertWidget(tasksLayout->count()-1, tasks[i]);
 
 }
@@ -122,9 +153,37 @@ void Theme::paintEvent(QPaintEvent *)
     style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
 }
 
-#include <iostream>
+void Theme::sort(bool cmp(Task *, Task *)) {
+    for (size_t i = 1; i < tasks.size(); i++)
+        for (int j = i; j > 0; j--)
+            if (!cmp(tasks[j - 1], tasks[j]))
+                std::swap(tasks[j - 1], tasks[j]);
+}
 
-void Theme::pressBurger()
+void Theme::ShowContextMenu(const QPoint& pos)
 {
-    std::cout << "toggled" << std::endl;
+    QMenu *menu = new QMenu("Menu", this);
+    QMenu *sort = new QMenu("Сортировка", menu);
+
+    QStringList sortNames = Canban::inst()->getThemeNames();
+    for (int i = 0; i < sortDescr.size(); i++) {
+        QAction *themeAction = new QAction(sortDescr[i]);
+
+        sort->addAction(themeAction);
+    }
+    connect(sort, SIGNAL(triggered(QAction *)), this, SLOT(changeSort(QAction *)));
+
+    menu->addMenu(sort);
+    menu->popup(burger->mapToGlobal(pos));
+}
+
+void Theme::changeSort(QAction *sortName)
+{
+    if (sortName->text() == sortDescr[0]) selectedSort = DEADLINE;
+    if (sortName->text() == sortDescr[1]) selectedSort = CREATED;
+    if (sortName->text() == sortDescr[2]) selectedSort = NAME;
+    if (sortName->text() == sortDescr[3]) selectedSort = PRIORITY;
+    sortTasks();
+
+
 }

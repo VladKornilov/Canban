@@ -20,6 +20,7 @@ SOURCES += \
     addtaskdialog.cpp \
     canban.cpp \
     employee.cpp \
+    files.cpp \
     main.cpp \
     mainwindow.cpp \
     task.cpp \
@@ -30,6 +31,7 @@ HEADERS += \
     addtaskdialog.h \
     canban.h \
     employee.h \
+    files.h \
     mainwindow.h \
     task.h \
     theme.h

@@ -10,7 +10,7 @@
 
 class Canban : public QWidget
 {
-    //Q_OBJECT
+    Q_OBJECT
 public:
     static void create(QWidget *parent) {
         instance = new Canban(parent);
@@ -18,8 +18,15 @@ public:
     static Canban *inst() {
         return instance;
     }
+    void addNewTheme(Theme *theme);
     void addNewTask(Task *task);
+    void addExistingTask(Task *task);
+    void moveTask(Task *task, Theme *toTheme);
+    Task *getTask(QString taskName);
+    void removeTask(QString taskName);
     void addNewEmployee(Employee *empl) { employees.push_back(empl); }
+    QStringList getThemeNames();
+    Theme *getTheme(QString name);
     QStringList getEmployeeNames();
     Employee *getEmployee(QString name);
     void updateTime();
@@ -37,9 +44,10 @@ private:
     QHBoxLayout *themesLayout;
 
     std::vector <Theme *> themes;
-    std::vector <QString> themeNames;
+    QStringList themeNames;
 
     std::vector <Employee *> employees;
+
 };
 
 
