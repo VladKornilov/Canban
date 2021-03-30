@@ -21,16 +21,12 @@ public:
 
     void setName(QString name) { this->name = name; }
     QString getName() { return name; }
-
     QString getDescription() { return description; }
-
     void setThemeName(QString name) { themeName = name; }
     QString getThemeName() { return themeName; }
-
     QString getColor() { return color.name(); }
-
     std::vector <Employee *> getPerformers() { return performers; }
-
+    void removePerformer(Employee *performer);
     void setDeadline(int y, int mo, int d, int h, int mi, int s);
 
     QDateTime getCreatedDateTime() { return created; }
@@ -40,6 +36,7 @@ public:
     QString getDeadlineString() { return deadline.toString("dd.MM.yy HH:mm"); }
 
     void updateTime();
+    void updateVisual();
 
     QString generateReport();
 
@@ -47,18 +44,14 @@ protected:
     void paintEvent(QPaintEvent *);
 
 private:
-
     QString name;
     QString description;
     QString themeName;
     QColor color;
     std::vector <Employee *> performers;
-    //priority
-
     QDateTime created;
     QDateTime deadline;
 
-    //GUI
     QPushButton *burger;
     QLabel *nameLabel;
     QLabel *descriptionLabel;
@@ -67,12 +60,12 @@ private:
     QLabel *timeleftLabel;
     QLabel *timeLabel;
     QLabel *perfLabel[3];
-
-public slots:
-    void ShowContextMenu(const QPoint& pos);
+    QHBoxLayout *perfLayout;
 
 private slots:
+    void ShowContextMenu(const QPoint& pos);
     void changeTheme(QAction *themeName);
+    void editTask();
     void removeTask();
 };
 

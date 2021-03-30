@@ -7,9 +7,12 @@
 #include <QEvent>
 #include <QMouseEvent>
 #include <QCoreApplication>
+#include <QMessageBox>
 
-#include "canban.h"
+
 #include "task.h"
+#include "canban.h"
+#include "addtaskdialog.h"
 
 
 Task::Task(QString taskName, QString taskDescr, QString theme, QColor taskColor,
@@ -26,10 +29,9 @@ Task::Task(QString taskName, QString taskDescr, QString theme, QColor taskColor,
     setMaximumSize(Canban::TASK_WIDTH, 150);
     setMinimumSize(Canban::TASK_WIDTH, 120);
 
-
     QHBoxLayout *nameLayout = new QHBoxLayout();
 
-    nameLabel = new QLabel(name);
+    nameLabel = new QLabel();
     nameLabel->setAlignment(Qt::AlignHCenter | Qt::AlignTop);
     nameLabel->setStyleSheet("font: bold 14px;");
     nameLayout->addStretch();
@@ -43,26 +45,18 @@ Task::Task(QString taskName, QString taskDescr, QString theme, QColor taskColor,
     connect(burger, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(ShowContextMenu(const QPoint&)));
     nameLayout->addWidget(burger);
 
-
-    descriptionLabel = new QLabel(description, this);
+    descriptionLabel = new QLabel();
     descriptionLabel->setSizePolicy(QSizePolicy::Minimum, QSizePolicy::Minimum);
     descriptionLabel->setWordWrap(true);
 
-
-
     timeLabel = new QLabel();
-
-    timeLabel->setToolTip(QStringLiteral(u"Создано: %1\nДедлайн: %2").arg(getCreatedString()).arg(getDeadlineString()));
     timeLabel->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Maximum);
+    timeLabel->setFixedHeight(32);
 
-    QHBoxLayout *perfLayout = new QHBoxLayout();
+    perfLayout = new QHBoxLayout();
     perfLayout->addStretch();
-    for (size_t i = 0; i < performers.size(); i++) {
-        perfLabel[i] = new QLabel();
-        perfLabel[i]->setPixmap(QPixmap::fromImage(performers[i]->getSmallPhoto()));
-        perfLabel[i]->setToolTip(performers[i]->getName());
-        perfLayout->addWidget(perfLabel[i]);
-    }
+    for (int i = 0; i < 3; i++)
+        perfLabel[i] = nullptr;
 
     QGridLayout *mainLayout = new QGridLayout;
     mainLayout->addLayout(nameLayout, 0, 0, 1, 2);
@@ -70,22 +64,25 @@ Task::Task(QString taskName, QString taskDescr, QString theme, QColor taskColor,
     mainLayout->addWidget(timeLabel, 2, 0);
     mainLayout->addLayout(perfLayout, 2, 1);
 
-    QColor invertColor(255-color.red(), 255-color.green(), 255-color.blue());
-
-    setStyleSheet(QStringLiteral(".Task { background-color: %1;"
-                                         "border-radius: 10px; "
-                                         "border: 4px solid; }"
-                                 ".Task[timeLeft=\"much\"] { border-color: green; }"
-                                 ".Task[timeLeft=\"small\"] { border-color: yellow; }"
-                                 ".Task[timeLeft=\"none\"] { border-color: red; }"
-                                 "QLabel { color: %2; }").arg(color.name()).arg(invertColor.name()));
-
-
-
     setLayout(mainLayout);
+    updateVisual();
     updateTime();
+}
 
-    //show();
+void Task::removePerformer(Employee *performer)
+{
+    for (size_t i = 0; i < performers.size(); i++) {
+        if (performers[i] == performer) {
+            for (size_t j = i + 1; j < performers.size(); j++) {
+                performers[j - 1] = performers[j];
+                perfLabel[j - 1] = perfLabel[j];
+            }
+            perfLabel[performers.size() - 1]->clear();
+            performers.pop_back();
+            break;
+        }
+    }
+    update();
 }
 
 void Task::setDeadline(int y, int mo, int d, int h, int mi, int s)
@@ -117,11 +114,13 @@ void Task::updateTime()
     timeLabel->setText(strTime);
 }
 
+
 QString fillString(QString symbols, int count) {
     QString str;
     while (count--) str += symbols;
     return str;
 }
+
 
 QString Task::generateReport()
 {
@@ -160,12 +159,48 @@ QString Task::generateReport()
     return report;
 }
 
+
 void Task::paintEvent(QPaintEvent *)
 {
     QStyleOption opt;
-    opt.init(this);
+    opt.initFrom(this);
     QPainter p(this);
     style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
+}
+
+
+void Task::updateVisual()
+{
+    nameLabel->setText(name);
+    descriptionLabel->setText(description);
+    timeLabel->setToolTip(QStringLiteral(u"Создано: %1\nДедлайн: %2").arg(getCreatedString()).arg(getDeadlineString()));
+
+    for (size_t i = 0; i < 3; i++) {
+        perfLayout->removeWidget(perfLabel[i]);
+        if (perfLabel[i] != nullptr) {
+            delete perfLabel[i];
+            perfLabel[i] = nullptr;
+        }
+    }
+
+    perfLayout->addStretch();
+    for (size_t i = 0; i < performers.size(); i++) {
+
+        perfLabel[i] = new QLabel();
+        perfLabel[i]->setPixmap(QPixmap::fromImage(performers[i]->getSmallPhoto()));
+        perfLabel[i]->setToolTip(performers[i]->getName());
+        perfLayout->addWidget(perfLabel[i]);
+    }
+
+    QColor invertColor(255-color.red(), 255-color.green(), 255-color.blue());
+    setStyleSheet(QStringLiteral(".Task { background-color: %1;"
+                                         "border-radius: 10px; "
+                                         "border: 4px solid; }"
+                                 ".Task[timeLeft=\"much\"] { border-color: green; }"
+                                 ".Task[timeLeft=\"small\"] { border-color: yellow; }"
+                                 ".Task[timeLeft=\"none\"] { border-color: red; }"
+                                 "QLabel { color: %2; }").arg(color.name()).arg(invertColor.name()));
+    update();
 }
 
 
@@ -181,23 +216,55 @@ void Task::ShowContextMenu(const QPoint& pos)
         if (theme->containsTask(this)) {
             themeAction->setEnabled(false);
         }
-
         move->addAction(themeAction);
-        //move
     }
     connect(move, SIGNAL(triggered(QAction *)), this, SLOT(changeTheme(QAction *)));
 
     menu->addMenu(move);
-    menu->popup(burger->mapToGlobal(pos));
+
+    QAction *edit = new QAction("Редактировать");
+    connect(edit, SIGNAL(triggered()), this, SLOT(editTask()));
+    menu->addAction(edit);
 
     QAction *remove = new QAction("Удалить");
     connect(remove, SIGNAL(triggered()), this, SLOT(removeTask()));
     menu->addAction(remove);
+
+    menu->popup(burger->mapToGlobal(pos));
 }
 
 void Task::changeTheme(QAction *themeName)
 {
     Canban::inst()->moveTask(this, Canban::inst()->getTheme(themeName->text()));
+}
+
+void Task::editTask()
+{
+    AddTaskDialog *dialog = new AddTaskDialog(name, description, color, performers, deadline);
+    if (dialog->exec() == QDialog::Accepted) {
+        QString taskName = dialog->getTaskName();
+        if (!taskName.isEmpty() && (Canban::inst()->getTask(taskName) == this || Canban::inst()->getTask(taskName) == nullptr)) {
+            name = dialog->getTaskName();
+            description = dialog->getTaskDescr();
+            color = dialog->getTaskColor();
+            performers = dialog->getPerformers();
+            deadline = dialog->getDateTime();
+            updateVisual();
+        }
+        else {
+            QMessageBox errorBox;
+            errorBox.setWindowTitle("Error!");
+            errorBox.setIcon(QMessageBox::Critical);
+            errorBox.setText("Невозможно изменить название задачи");
+            if (taskName.isEmpty()) {
+                errorBox.setDetailedText("Пустое название задачи");
+            }
+            else {
+                errorBox.setDetailedText(QStringLiteral("Задача с названием \"%1\" уже существует").arg(taskName));
+            }
+            errorBox.exec();
+        }
+    }
 }
 
 void Task::removeTask()

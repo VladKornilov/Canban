@@ -4,29 +4,29 @@
 #include "addemployeedialog.h"
 #include "canban.h"
 
-AddEmployeeDialog::AddEmployeeDialog()
+AddEmployeeDialog::AddEmployeeDialog(QString name, QString info, QString spec, QString sal, QImage image)
 {
     setWindowTitle("Добавить сотрудника");
+    setWindowFlag(Qt::WindowContextHelpButtonHint, false);
 
     QLabel *nameLabel = new QLabel("Имя сотрудника");
     QLabel *infoLabel = new QLabel("Заметка");
     QLabel *specLabel = new QLabel("Специализация");
     QLabel *slryLabel = new QLabel("Оплата за час:");
 
-    emplName = new QLineEdit();
-    emplName->setText("John Doe");
-    emplInfo = new QTextEdit();
+    emplName = new QLineEdit(name);
+    emplInfo = new QTextEdit(info);
     emplInfo->setFixedHeight(75);
     specComboBox = new QComboBox();
     specComboBox->addItems(Canban::inst()->specialities);
     specComboBox->setEditable(false);
+    specComboBox->setCurrentText(spec);
 
 
-    salary = new QLineEdit();
+    salary = new QLineEdit(sal);
     salary->setValidator(new QIntValidator(0, 999, this));
     salary->resize(30, salary->height());
     salary->setFixedWidth(30);
-    salary->setText("10");
     QHBoxLayout *salaryLayout = new QHBoxLayout();
     salaryLayout->addWidget(new QLabel("$"));
     salaryLayout->addWidget(salary);
@@ -34,13 +34,15 @@ AddEmployeeDialog::AddEmployeeDialog()
 
 
     photo = new QLabel();
-    photo->setPixmap(QPixmap("images/employee_dummy.png").scaled(128, 128));
+    photo->setPixmap(QPixmap::fromImage(image).scaled(128, 128));
+    QDir dir;
+    qDebug() << dir.absolutePath();
     photo->setStyleSheet(" border: 2px solid gray;");
     QPushButton *upload = new QPushButton("Загрузить фото");
     connect(upload, SIGNAL(released()), this, SLOT(uploadPhoto()));
 
-    QPushButton* btnOk     = new QPushButton("Ok");
-    QPushButton* btnCancel = new QPushButton("Cancel");
+    QPushButton* btnOk     = new QPushButton("Сохранить");
+    QPushButton* btnCancel = new QPushButton("Отмена");
     connect(btnOk, SIGNAL(clicked()), SLOT(accept()));
     connect(btnCancel, SIGNAL(clicked()), SLOT(reject()));
 

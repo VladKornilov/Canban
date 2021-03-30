@@ -1,7 +1,6 @@
 #include "employee.h"
 
 
-
 Employee::Employee(QString name, QString spec, QString info, int salary, QImage photo)
 {
     this->name = name;
@@ -9,24 +8,12 @@ Employee::Employee(QString name, QString spec, QString info, int salary, QImage 
     personalInfo = info;
     hourSalary = salary;
     overallSalary = 0;
+    if (photo.isNull()) {
+        photo.load(QString("images/employee_dummy.png"));
+    }
     this->photo = photo;
 }
 
-
-QImage Employee::getFullPhoto()
-{
-    return photo.scaled(256, 256);
-}
-
-QImage Employee::getSmallPhoto()
-{
-    return photo.scaled(32, 32);
-}
-
-void Employee::addTask(Task *task)
-{
-    tasks.push_back(task);
-}
 
 void Employee::markTaskCompleted(Task *task)
 {
@@ -39,11 +26,13 @@ void Employee::markTaskCompleted(Task *task)
     }
 }
 
+
 QString fillString1(QString symbols, int count) {
     QString str;
     while (count--) str += symbols;
     return str;
 }
+
 
 QString Employee::generateReport()
 {
@@ -89,3 +78,4 @@ QString Employee::generateReport()
     report += fillString1("=", reportWidth) + "\n";
     return report;
 }
+

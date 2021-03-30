@@ -1,13 +1,8 @@
-#include <QStyleOption>
-#include <QPainter>
-#include <QPushButton>
-#include <QMenu>
-
-#include "canban.h"
 #include "theme.h"
-#include "task.h"
+#include "canban.h"
 
-Theme::Theme(QWidget *parent, QString name, QColor *color) : QWidget(parent)
+
+Theme::Theme(QWidget *parent, QString name, QColor color) : QWidget(parent)
 {
     selectedSort = NAME;
 
@@ -24,26 +19,24 @@ Theme::Theme(QWidget *parent, QString name, QColor *color) : QWidget(parent)
     nameLayout->addStretch();
 
     burger = new QPushButton();
-    burger->setIcon(QIcon("images/burger.png"));
-    burger->setStyleSheet("QAbstractButton { background: rgba(255,255,255,0); } QAbstractButton:pressed {border: 2px solid #000000; }");
+    burger->setIcon(QIcon("../images/burger.png"));
+    burger->setStyleSheet("QAbstractButton { background: rgba(255,255,255,0); }");
     burger->setContextMenuPolicy(Qt::CustomContextMenu);
     connect(burger, SIGNAL(customContextMenuRequested(const QPoint&)), this, SLOT(ShowContextMenu(const QPoint&)));
     nameLayout->addWidget(burger);
 
     tasksLayout->addLayout(nameLayout);
     tasksLayout->insertStretch(-1);
-    tasksLayout->setMargin(5);
+    tasksLayout->setContentsMargins(5, 5, 5, 5);
     tasksLayout->setAlignment(Qt::AlignHCenter);
 
     setLayout(tasksLayout);
 
-    setStyleSheet(QStringLiteral(".Theme { border-radius: 10px; background-color: %1; }").arg(color->name()));
+    setStyleSheet(QStringLiteral(".Theme { border-radius: 10px; background-color: %1; }").arg(color.name()));
     setContentsMargins(0, 5, 5, 0);
 
     setMinimumWidth(Canban::TASK_WIDTH + 10);
     setMaximumWidth(Canban::TASK_WIDTH + 10);
-//    setMinimumHeight(500);
-
     show();
 }
 
@@ -64,7 +57,7 @@ void Theme::addTask(Task *task)
 
 void Theme::removeTask(Task *task)
 {
-    for (size_t i = 0; i < tasks.size(); i++)
+    for (size_t i = 0; i < tasks.size(); i++) {
         if (tasks[i] == task) {
             tasksLayout->removeWidget(task);
             tasksLayout->update();
@@ -72,6 +65,7 @@ void Theme::removeTask(Task *task)
             //delete task;
             break;
         }
+    }
     sortTasks();
 }
 
@@ -109,10 +103,6 @@ bool cmpName(Task *a, Task *b) {
     return a->getName() < b->getName();
 }
 
-//bool cmpPriority(Task *a, Task *b) {
-//    return true;
-//}
-
 void Theme::sortTasks()
 {
     for (size_t i = 0; i < tasks.size(); i++)
@@ -128,15 +118,9 @@ void Theme::sortTasks()
     case NAME:
         sort(cmpName);
         break;
-    case PRIORITY:
-//        sort(cmpPriority);
-        break;
     }
-
     for (size_t i = 0; i < tasks.size(); i++)
-        //tasksLayout->addWidget(tasks[i]);
         tasksLayout->insertWidget(tasksLayout->count()-1, tasks[i]);
-
 }
 
 void Theme::updateTime()
@@ -148,7 +132,7 @@ void Theme::updateTime()
 void Theme::paintEvent(QPaintEvent *)
 {
     QStyleOption opt;
-    opt.init(this);
+    opt.initFrom(this);
     QPainter p(this);
     style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
 }
@@ -165,7 +149,7 @@ void Theme::ShowContextMenu(const QPoint& pos)
     QMenu *menu = new QMenu("Menu", this);
     QMenu *sort = new QMenu("Сортировка", menu);
 
-    QStringList sortNames = Canban::inst()->getThemeNames();
+    //QStringList sortNames = Canban::inst()->getThemeNames();
     for (int i = 0; i < sortDescr.size(); i++) {
         QAction *themeAction = new QAction(sortDescr[i]);
 
@@ -174,6 +158,14 @@ void Theme::ShowContextMenu(const QPoint& pos)
     connect(sort, SIGNAL(triggered(QAction *)), this, SLOT(changeSort(QAction *)));
 
     menu->addMenu(sort);
+
+    QAction *moveLeft = new QAction("Переместить влево");
+    QAction *moveRight = new QAction("Переместить вправо");
+    menu->addAction(moveLeft);
+    menu->addAction(moveRight);
+    connect(moveLeft, SIGNAL(triggered()), this, SLOT(moveLeft()));
+    connect(moveRight, SIGNAL(triggered()), this, SLOT(moveRight()));
+
     menu->popup(burger->mapToGlobal(pos));
 }
 
@@ -182,8 +174,15 @@ void Theme::changeSort(QAction *sortName)
     if (sortName->text() == sortDescr[0]) selectedSort = DEADLINE;
     if (sortName->text() == sortDescr[1]) selectedSort = CREATED;
     if (sortName->text() == sortDescr[2]) selectedSort = NAME;
-    if (sortName->text() == sortDescr[3]) selectedSort = PRIORITY;
     sortTasks();
+}
 
+void Theme::moveLeft()
+{
+    Canban::inst()->moveTheme(this, -1);
+}
 
+void Theme::moveRight()
+{
+    Canban::inst()->moveTheme(this, 1);
 }

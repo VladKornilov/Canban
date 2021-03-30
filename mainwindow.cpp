@@ -1,7 +1,7 @@
-#include <QTimer>
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QMessageBox>
+#include <QTextStream>
 
 #include "mainwindow.h"
 
@@ -14,16 +14,31 @@ MainWindow::MainWindow(QWidget *parent)
     Canban::create(this);
     Files::create();
 
-    setupFileMenu();
-    setupAddMenu();
-
     canban = Canban::inst();
+    std::vector <Employee *> employees = Files::inst()->loadEmployees("database/savedEmpl.json");
+    std::vector <Task *> tasks = Files::inst()->loadTasks("database/savedTasks.json");
+    if (!employees.empty() || !tasks.empty()) {
+        QMessageBox loadBox;
+       loadBox.setWindowTitle("Загрузка");
+       loadBox.setIcon(QMessageBox::Question);
+       loadBox.setText("Вы хотите загрузить последнее состояние доски?");
+       QPushButton *accept = loadBox.addButton(QString("Да"), QMessageBox::AcceptRole);
+       loadBox.addButton(QString("Нет"), QMessageBox::RejectRole);
+       loadBox.exec();
+       if (loadBox.clickedButton() == accept) {
+           for (Employee *empl : employees)
+               canban->addNewEmployee(empl);
+           for (Task *task : tasks)
+               canban->addExistingTask(task);
+       }
+    }
 
 
-    QTimer *timeTimer = new QTimer();
-    timeTimer->setInterval(1000);
-    connect(timeTimer, SIGNAL(timeout()), this, SLOT(updateTime()));
-    timeTimer->start();
+    menuBar()->addMenu(setupFileMenu());
+    menuBar()->addMenu(setupAddMenu());
+    QAction *emplList = new QAction("Список сотрудников");
+    menuBar()->addAction(emplList);
+    connect(emplList, SIGNAL(triggered()), this, SLOT(showEmployees()));
 
 
 //    QHBoxLayout *mainLayout = new QHBoxLayout();
@@ -37,12 +52,15 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
+    Files::inst()->saveEmployees("database/savedEmpl.json");
+    Files::inst()->saveTasks("database/savedTasks.json");
+
     delete ui;
 }
 
 
-void MainWindow::setupFileMenu() {
-    fileMenu = menuBar()->addMenu("Файл");
+QMenu *MainWindow::setupFileMenu() {
+    QMenu *fileMenu = new QMenu("Файл");
     QAction *loadTasks = new QAction("Импорт задач");
     QAction *loadEmployees = new QAction("Импорт сотрудников");
     QAction *saveTasks = new QAction("Экспорт задач");
@@ -64,10 +82,11 @@ void MainWindow::setupFileMenu() {
     connect(saveEmployees, SIGNAL(triggered()), SLOT(saveEmployees()));
     connect(reportTasks, SIGNAL(triggered()), SLOT(reportTasks()));
     connect(reportEmployees, SIGNAL(triggered()), SLOT(reportEmployees()));
+    return fileMenu;
 }
 
-void MainWindow::setupAddMenu() {
-    addMenu = menuBar()->addMenu("Добавить");
+QMenu *MainWindow::setupAddMenu() {
+    QMenu *addMenu = new QMenu("Добавить");
     QAction *addTask = new QAction("Добавить задачу", this);
     QAction *addTheme = new QAction("Добавить колонку");
     QAction *addEmployee = new QAction("Добавить сотрудника");
@@ -77,6 +96,7 @@ void MainWindow::setupAddMenu() {
     connect(addTask, SIGNAL(triggered()), SLOT(addTask()));
     connect(addTheme, SIGNAL(triggered()), SLOT(addTheme()));
     connect(addEmployee, SIGNAL(triggered()), SLOT(addEmployee()));
+    return addMenu;
 }
 
 void MainWindow::loadTasks()
@@ -146,7 +166,7 @@ void MainWindow::addTask()
     AddTaskDialog *dialog = new AddTaskDialog();
     if (dialog->exec() == QDialog::Accepted) {
         QString taskName = dialog->getTaskName();
-        if (!taskName.isEmpty() && Canban::inst()->getTask(taskName) == nullptr) {
+        if (!taskName.isEmpty() && canban->getTask(taskName) == nullptr) {
             Task *task = new Task(taskName, dialog->getTaskDescr(), "",
                                   dialog->getTaskColor(),  dialog->getPerformers(), dialog->getDateTime());
             canban->addNewTask(task);
@@ -169,43 +189,62 @@ void MainWindow::addTask()
 
 void MainWindow::addTheme()
 {
-    bool ok;
-    QString themeName = QInputDialog::getText(this, "Добавить тему", "Название темы: ", QLineEdit::Normal, "", &ok);
-    if (ok) {
-        if (!themeName.isEmpty() && Canban::inst()->getTheme(themeName) == nullptr) {
-            Canban::inst()->addNewTheme(new Theme(nullptr, themeName, new QColor("white")));
+    AddThemeDialog *dialog = new AddThemeDialog();
+    if (dialog->exec() == QDialog::Accepted) {
+        QString themeName = dialog->getThemeName();
+        if (!themeName.isEmpty() && canban->getTheme(themeName) == nullptr) {
+            Theme *theme = new Theme(nullptr, dialog->getThemeName(), dialog->getThemeColor());
+            canban->addNewTheme(theme);
         }
         else {
             QMessageBox errorBox;
             errorBox.setWindowTitle("Error!");
             errorBox.setIcon(QMessageBox::Critical);
-            errorBox.setText("Невозможно создать тему с таким названием");
+            errorBox.setText("Невозможно создать колонку с таким названием");
             if (themeName.isEmpty()) {
-                errorBox.setDetailedText("Пустое название темы");
+                errorBox.setDetailedText("Пустое название колонки");
             }
             else {
-                errorBox.setDetailedText(QStringLiteral("Тема с названием \"%1\" уже существует").arg(themeName));
+                errorBox.setDetailedText(QStringLiteral("Колонка с названием \"%1\" уже существует").arg(themeName));
             }
             errorBox.exec();
         }
     }
-
 }
 
 void MainWindow::addEmployee()
 {
     AddEmployeeDialog *dialog = new AddEmployeeDialog();
     if (dialog->exec() == QDialog::Accepted) {
-        Employee *empl = new Employee(dialog->getEmplName(), dialog->getEmplSpec(),
-                                      dialog->getEmplInfo(), dialog->getSalary(), dialog->getPhoto());
-        canban->addNewEmployee(empl);
+        QString emplName = dialog->getEmplName();
+        if (!emplName.isEmpty() && canban->getEmployee(emplName) == nullptr) {
+            Employee *empl = new Employee(dialog->getEmplName(), dialog->getEmplSpec(),
+                                        dialog->getEmplInfo(), dialog->getSalary(), dialog->getPhoto());
+            canban->addNewEmployee(empl);
+        }
+        else {
+            QMessageBox errorBox;
+            errorBox.setWindowTitle("Error!");
+            errorBox.setIcon(QMessageBox::Critical);
+            errorBox.setText("Невозможно создать сотрудника");
+            if (emplName.isEmpty()) {
+                errorBox.setDetailedText("Задано пустое имя сотрудника");
+            }
+            else {
+                errorBox.setDetailedText(QStringLiteral("Сотрудник по имени \"%1\" уже существует").arg(emplName));
+            }
+            errorBox.exec();
+        }
     }
 }
 
-void MainWindow::updateTime()
+void MainWindow::showEmployees()
 {
-    canban->updateTime();
+    ShowEmployeesDialog *dialog = new ShowEmployeesDialog();
+    dialog->exec();
 }
+
+
 
 
 

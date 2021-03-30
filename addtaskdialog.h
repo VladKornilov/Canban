@@ -18,7 +18,11 @@ class AddTaskDialog : public QDialog
 {
     Q_OBJECT
 public:
-    AddTaskDialog();
+    AddTaskDialog(QString taskName = "",
+                  QString taskDescr = "",
+                  QColor taskColor = QColor("orange"),
+                  std::vector <Employee *> taskPerformers = std::vector <Employee *>(),
+                  QDateTime deadline = QDateTime::currentDateTime().addSecs(1800));
 
     QString getTaskName() { return taskName->text(); }
     QString getTaskDescr() { return taskDescr->toPlainText(); }
@@ -36,7 +40,7 @@ private:
     QTimeEdit *timeEdit;
     QGridLayout *layout;
 
-    QHBoxLayout *setupPerfLayout();
+    QHBoxLayout *setupPerfLayout(int id, QString selected = "");
     QLabel *performerPhotos[3];
     QComboBox *performerNames[3];
     size_t numOfPerformers = 0;

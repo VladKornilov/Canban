@@ -9,6 +9,8 @@
 #include "canban.h"
 #include "addtaskdialog.h"
 #include "addemployeedialog.h"
+#include "addthemedialog.h"
+#include "showemployeesdialog.h"
 #include "files.h"
 
 QT_BEGIN_NAMESPACE
@@ -26,10 +28,9 @@ public:
 private:
     Ui::MainWindow *ui;
 
-    QMenu *fileMenu;
-    void setupFileMenu();
-    QMenu *addMenu;
-    void setupAddMenu();
+    //QMenu *fileMenu;
+    QMenu *setupFileMenu();
+    QMenu *setupAddMenu();
 
     Canban *canban;
     Files *files;
@@ -45,6 +46,6 @@ private slots:
     void addTask();
     void addTheme();
     void addEmployee();
-    void updateTime();
+    void showEmployees();
 };
 #endif // MAINWINDOW_H

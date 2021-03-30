@@ -18,21 +18,25 @@ DEFINES += QT_DEPRECATED_WARNINGS
 SOURCES += \
     addemployeedialog.cpp \
     addtaskdialog.cpp \
+    addthemedialog.cpp \
     canban.cpp \
     employee.cpp \
     files.cpp \
     main.cpp \
     mainwindow.cpp \
+    showemployeesdialog.cpp \
     task.cpp \
     theme.cpp
 
 HEADERS += \
     addemployeedialog.h \
     addtaskdialog.h \
+    addthemedialog.h \
     canban.h \
     employee.h \
     files.h \
     mainwindow.h \
+    showemployeesdialog.h \
     task.h \
     theme.h
 

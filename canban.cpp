@@ -1,4 +1,5 @@
 #include <QColor>
+#include <QTimer>
 
 #include "canban.h"
 
@@ -13,22 +14,22 @@ Canban::Canban(QWidget *parent) : QWidget(parent)
     QString colors[3] = {"#FFE473", "#B53AD4", "#60D6A9"};
     int i = 0;
     for (auto name : themeNames) {
-        themes.push_back(new Theme(this, name, new QColor(colors[i++])));
+        themes.push_back(new Theme(this, name, QColor(colors[i++])));
     }
 
     themesLayout = new QHBoxLayout();
 
-
-    for (size_t i = 0; i < themes.size(); i++) {
-        //QScrollArea *themeScroll = new QScrollArea();
-        //themeScroll->setWidget(themes[i]);
-        //themeScroll->ho
+    for (size_t i = 0; i < themes.size(); i++)
         themesLayout->addWidget(themes[i]);
-        //themesLayout->addWidget(themeScroll);
-    }
+
     themesLayout->addStretch(-1);
 
     setLayout(themesLayout);
+
+    QTimer *timeTimer = new QTimer();
+    timeTimer->setInterval(1000);
+    connect(timeTimer, SIGNAL(timeout()), this, SLOT(updateTime()));
+    timeTimer->start();
 }
 
 void Canban::addNewTheme(Theme *theme)
@@ -57,10 +58,12 @@ void Canban::addExistingTask(Task *task)
 {
     for (int i = 0; i < themeNames.size(); i++) {
         if (themeNames[i] == task->getThemeName()) {
-            themes[i]->addTask(task);
-            for (auto perf : task->getPerformers())
-                perf->addTask(task);
-            return;
+            if (themes[i]->getTask(task->getName()) == nullptr) {
+                themes[i]->addTask(task);
+                for (auto perf : task->getPerformers())
+                    perf->addTask(task);
+                return;
+            }
         }
     }
 }
@@ -81,6 +84,23 @@ void Canban::moveTask(Task *task, Theme *toTheme)
     }
 }
 
+void Canban::moveTheme(Theme *theme, int to)
+{
+    int from = -1;
+    for (size_t i = 0; i < themes.size(); i++)
+        if (themes[i] == theme) from = i;
+
+    to = from + to;
+    if (to < 0 || to >= (int)themes.size()) return;
+
+    themesLayout->removeWidget(themes[from]);
+    themesLayout->replaceWidget(themes[to], themes[from]);
+    themesLayout->insertWidget(from, themes[to]);
+    themesLayout->update();
+    std::swap(themes[from], themes[to]);
+    std::swap(themeNames[from], themeNames[to]);
+}
+
 Task *Canban::getTask(QString taskName)
 {
     for (auto i : themes) {
@@ -93,9 +113,29 @@ Task *Canban::getTask(QString taskName)
 
 void Canban::removeTask(QString taskName)
 {
-    for (auto i : themes) {
+    for (auto i : themes)
         i->removeTask(i->getTask(taskName));
+}
+
+void Canban::editEmployee(Employee *empl)
+{
+    for (auto theme : themes) {
+        for (auto task : theme->getTasks()) {
+            auto perf = task->getPerformers();
+            if (std::find(perf.begin(), perf.end(), empl) != perf.end())
+                task->updateVisual();
+        }
     }
+}
+
+void Canban::fireEmployee(Employee *empl)
+{
+    for (auto theme : themes)
+        for (auto task : theme->getTasks())
+            task->removePerformer(empl);
+
+    employees.erase(std::find(employees.begin(), employees.end(), empl));
+    delete empl;
 }
 
 QStringList Canban::getThemeNames()
@@ -134,5 +174,3 @@ void Canban::updateTime()
     for (Theme *theme : themes)
         theme->updateTime();
 }
-
-

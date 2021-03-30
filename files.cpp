@@ -3,6 +3,7 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QTextStream>
+#include <QImageWriter>
 
 #include "files.h"
 
@@ -35,8 +36,9 @@ std::vector<Task *> Files::loadTasks(QString fileName)
                               jsonTask["theme"].toString(),
                               QColor(jsonTask["color"].toString()),
                               customers,
-                              QDateTime::fromTime_t(jsonTask["deadline"].toInt()),
-                              QDateTime::fromTime_t(jsonTask["created"].toInt()));
+                              QDateTime::fromSecsSinceEpoch(jsonTask["deadline"].toInt()),
+                              QDateTime::fromSecsSinceEpoch(jsonTask["created"].toInt()));
+
         tasks.push_back(task);
     }
     return tasks;
@@ -56,8 +58,8 @@ bool Files::saveTasks(QString fileName)
             jsonTask.insert("description", task->getDescription());
             jsonTask.insert("theme", task->getThemeName());
             jsonTask.insert("color", task->getColor());
-            jsonTask.insert("created", (int)task->getCreatedDateTime().toTime_t());
-            jsonTask.insert("deadline", (int)task->getDeadlineDateTime().toTime_t());
+            jsonTask.insert("created", (int)task->getCreatedDateTime().toSecsSinceEpoch());
+            jsonTask.insert("deadline", (int)task->getDeadlineDateTime().toSecsSinceEpoch());
 
             QJsonArray jsonEmpls;
             for (Employee *empl : task->getPerformers()) {
@@ -107,8 +109,11 @@ bool Files::saveEmployees(QString fileName)
         Employee *empl = Canban::inst()->getEmployee(emplName);
 
         QString imageFile = fileDir.path() + "/" + emplName + ".png";
-        bool saved = empl->getFullPhoto().save(imageFile);
-        if (!saved) return false;
+        QImageWriter writer(imageFile);
+        writer.write(empl->getFullPhoto());
+
+        //bool saved = empl->getSmallPhoto().save(imageFile);
+        //if (!saved) return false;
 
         QJsonObject jsonEmpl;
         jsonEmpl.insert("name", empl->getName());

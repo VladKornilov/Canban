@@ -1,21 +1,25 @@
-#ifndef DAY_H
-#define DAY_H
+#ifndef THEME_H
+#define THEME_H
 
 #include <QWidget>
 #include <QPushButton>
 #include <QDate>
 #include <QString>
+#include <QStyleOption>
+#include <QPainter>
+#include <QPushButton>
+#include <QMenu>
 #include <vector>
+
+
+
 #include "task.h"
-
-
 
 class Theme : public QWidget
 {
     Q_OBJECT
 public:
-    //Theme(QWidget *parent);
-    Theme(QWidget *parent, QString name, QColor *color);
+    Theme(QWidget *parent, QString name, QColor color);
     QString getName();
     void addTask(Task *task);
     void removeTask(Task *task);
@@ -33,8 +37,8 @@ protected:
 private:
     void sort(bool cmp(Task *, Task *));
 
-    enum SortType {DEADLINE, CREATED, NAME, PRIORITY};
-    QStringList sortDescr = (QStringList() << "Дедлайн" << "Дата создания" << "Название" << "Приоритет");
+    enum SortType {DEADLINE, CREATED, NAME};
+    QStringList sortDescr = (QStringList() << "Дедлайн" << "Дата создания" << "Название");
 
     SortType selectedSort;
     QLabel *nameLabel;
@@ -47,6 +51,8 @@ public slots:
 
 private slots:
     void changeSort(QAction *sortName);
+    void moveLeft();
+    void moveRight();
 };
 
-#endif // DAY_H
+#endif // THEME_H

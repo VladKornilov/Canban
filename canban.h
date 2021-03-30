@@ -3,6 +3,7 @@
 
 #include <QGraphicsView>
 #include <vector>
+
 #include "theme.h"
 #include "employee.h"
 
@@ -22,14 +23,16 @@ public:
     void addNewTask(Task *task);
     void addExistingTask(Task *task);
     void moveTask(Task *task, Theme *toTheme);
+    void moveTheme(Theme *theme, int to);
     Task *getTask(QString taskName);
     void removeTask(QString taskName);
     void addNewEmployee(Employee *empl) { employees.push_back(empl); }
+    void editEmployee(Employee *empl);
+    void fireEmployee(Employee *empl);
     QStringList getThemeNames();
     Theme *getTheme(QString name);
     QStringList getEmployeeNames();
     Employee *getEmployee(QString name);
-    void updateTime();
 
     static const int TASK_WIDTH = 250;
     const QStringList specialities = {"Junior-программист",
@@ -48,6 +51,8 @@ private:
 
     std::vector <Employee *> employees;
 
+private slots:
+    void updateTime();
 };
 
 
